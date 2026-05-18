@@ -1,8 +1,7 @@
 import os
-import asyncio
 from flask import Flask
 from threading import Thread
-from telethon import TelegramClient
+from pyrogram import Client, filters
 
 app = Flask('')
 
@@ -19,46 +18,21 @@ API_HASH = '30512173bd0a1fdb55f85e46860a9638'
 TARGET_CHANNEL = -1003964950414
 SOURCE_CHANNEL = 'Avibum'
 
-# Render se environment variables uthana
-PHONE = os.environ.get('PHONE')
-CODE = os.environ.get('CODE')
+# Pyrogram session string se direct login bina kisi OTP ke
+STRING_SESSION = os.environ.get('SESSION')
+app_bot = Client("my_session", api_id=API_ID, api_hash=API_HASH, session_string=STRING_SESSION)
 
-async def main():
-    client = TelegramClient('/opt/render/project/src/session_name', API_ID, API_HASH)
-    
-    print("Connecting to Telegram...")
-    await client.connect()
-    
-    if not await client.is_user_authorized():
-        if not CODE:
-            # Agar code abhi tak Render me nahi dala hai, toh pehle phone number bhejega
-            print(f"Sending code request to {PHONE}...")
-            await client.send_code_request(PHONE)
-            print("🔴 STEP A COMPLETED: Ab Render me jaakar CODE variable daliye!")
-            return
-        else:
-            # Agar code mil gaya hai, toh login complete karega
-            try:
-                print("Attempting to sign in with code...")
-                await client.sign_in(PHONE, CODE)
-                print("🟢 LOGIN SUCCESSFUL!")
-            except Exception as e:
-                print(f"Login error: {e}")
-                return
-
-    print("Userbot started and monitoring channel...")
-    from telethon import events
-    
-    @client.on(events.NewMessage(chats=SOURCE_CHANNEL))
-    async def handler(event):
-        try:
-            await client.send_message(TARGET_CHANNEL, event.message)
-        except Exception as e:
-            print(f"Forward error: {e}")
-
-    await client.run_until_disconnected()
+@app_bot.on_message(filters.chat(SOURCE_CHANNEL))
+async def forward_message(client, message):
+    try:
+        # Message/Signal aate hi turant aapke channel me copy ho jayega
+        await message.copy(TARGET_CHANNEL)
+    except Exception as e:
+        print(f"Forward error: {e}")
 
 if __name__ == '__main__':
     t = Thread(target=run_flask)
     t.start()
-    asyncio.run(main())
+    
+    print("Userbot is starting on Pyrogram...")
+    app_bot.run()

@@ -1,31 +1,40 @@
 import os
 from flask import Flask
 from threading import Thread
-import telebot
+from telethon import TelegramClient, events
 
+# Render ko active rakhne ke liye Web Server
 app = Flask('')
 
 @app.route('/')
 def home():
-    return "Bot is running 24/7!"
+    return "Userbot is running 24/7!"
 
 def run_flask():
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 8080)))
 
-BOT_TOKEN = "8613146352:AAHh2-cz3hp236lsOo0VjvZ1n26Glsyv48I"
+# Aapki actual details jo maine set kar di hain
+API_ID = 24953130
+API_HASH = '30512173bd0a1fdb55f85e46860a9638'
 TARGET_CHANNEL = -1003964950414
+SOURCE_CHANNEL = 'Avibum'
 
-bot = telebot.TeleBot(BOT_TOKEN)
+# Client setup (Aapke session ko persistent rakhne ke liye base directory use karega)
+client = TelegramClient('/opt/render/project/src/session_name', API_ID, API_HASH)
 
-@bot.channel_post_handler(func=lambda message: True)
-def handle_post(message):
+@client.on(events.NewMessage(chats=SOURCE_CHANNEL))
+async def my_event_handler(event):
     try:
-        bot.forward_message(chat_id=TARGET_CHANNEL, from_chat_id=message.chat.id, message_id=message.message_id)
+        # Signal aate hi turant forward karega
+        await client.send_message(TARGET_CHANNEL, event.message)
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"Forwarding error: {e}")
 
 if __name__ == '__main__':
+    # Web server start karna
     t = Thread(target=run_flask)
     t.start()
-    print("Bot is starting...")
-    bot.infinity_polling()
+    
+    print("Userbot starting...")
+    client.start()
+    client.run_until_disconnected()

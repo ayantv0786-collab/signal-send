@@ -1,3 +1,4 @@
-pytelegrambotapi
-telethon
+pyrogram
+tgcrypto
 flask
+
